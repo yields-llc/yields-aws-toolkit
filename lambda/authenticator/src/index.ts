@@ -3,6 +3,7 @@ import { Authenticator } from 'cognito-at-edge'
 
 declare module 'bun' {
   interface Env {
+    AWS_DEFAULT_REGION: string
     USER_POOL_ID: string
     USER_POOL_CLIENT_ID: string
     USER_POOL_DOMAIN: string
@@ -10,8 +11,7 @@ declare module 'bun' {
 }
 
 const authenticator = new Authenticator({
-  // Replace these parameter values with those of your own environment
-  region: 'ap-northeast-1', // user pool region
+  region: process.env.AWS_DEFAULT_REGION, // user pool region
   userPoolId: process.env.USER_POOL_ID, // user pool ID
   userPoolAppId: process.env.USER_POOL_CLIENT_ID, // user pool app client ID
   userPoolDomain: process.env.USER_POOL_DOMAIN, // user pool domain

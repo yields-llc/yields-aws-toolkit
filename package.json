@@ -1,6 +1,5 @@
 {
   "name": "yields-aws-toolkit",
-  "module": "index.ts",
   "type": "module",
   "private": true,
   "devDependencies": {
