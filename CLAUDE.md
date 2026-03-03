@@ -4,24 +4,63 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-A CLI toolkit that deploys AWS infrastructure to protect a static website so only specific Google Workspace users can access it. It uses Cognito with Google OAuth as the identity provider and Lambda@Edge for request authentication.
+モノレポ構成。`packages/` に npm パッケージ、`examples/` にその活用例を置く。
 
-## Commands
+| ディレクトリ | 内容 |
+|---|---|
+| `packages/aws-toolkit/` | npm パッケージ `@yields-llc/aws-toolkit`（GitHub Packages で公開） |
+| `examples/google-sso/` | aws-toolkit を使った Google SSO 保護サイトの構築例 |
+
+## packages/aws-toolkit
+
+### コマンド
 
 ```bash
-# Install dependencies
+cd packages/aws-toolkit
+
+# 依存インストール
 bun install
 
-# Run a CLI task
-bun task <command>
+# Lint / Format
+bun run lint
+bun run format:fix
 
-# Deploy all stacks
+# パッケージ公開（GitHub Packages）
+bun publish
+```
+
+### アーキテクチャ
+
+`bin/commander.ts` がエントリポイント。`deploy:stack` と `delete:stack` の2コマンドのみ提供する汎用 CLI パッケージ。
+
+- `commands/base.ts` — `BaseCommand` 抽象クラス。インスタンス化時に `.env` を `process.env` へロードし、`--profile` / `--region` オプションを付与する
+- `commands/deployStack.ts` — `deploy:stack` コマンド。`--template` / `--stack-name` などを受け取り `aws cloudformation deploy` を実行
+- `commands/deleteStack.ts` — `delete:stack` コマンド。スタック削除 + 完了待機
+- `lib/aws/` — AWS CLI 呼び出しのラッパー群（`cloudformation`, `route53`, `cloudfront`, `s3`, `sam`, `lambda`）
+- `lib/env/variables.ts` — `loadVariables()` / `saveVariables()` で `.env` を読み書き
+- `lib/bun/shell.ts` — Bun Shell でコマンド実行し、pino でログ出力
+
+`lib/aws/global.ts` に共通型 `GlobalOptions`（`profile`, `region`）を定義。
+
+パッケージは `publishConfig` で GitHub Packages (`https://npm.pkg.github.com`) に公開。インストール側の `.npmrc` で `@yields-llc:registry=https://npm.pkg.github.com` の設定が必要。
+
+## examples/google-sso
+
+### コマンド
+
+```bash
+cd examples/google-sso
+
+# 依存インストール
+bun install
+
+# 全スタックをデプロイ
 bun task deploy:all
 
-# Delete all stacks
+# 全スタックを削除
 bun task delete:all
 
-# Individual deploy commands
+# 個別デプロイ
 bun task deploy:website
 bun task deploy:certificate
 bun task deploy:cognito
@@ -29,63 +68,48 @@ bun task deploy:authenticator
 bun task deploy:cloudfront
 bun task deploy:route53
 
-# Lint
-bunx biome lint
-
-# Format
-bunx biome format --write
+# Lint / Format
+bun run lint
+bun run format:fix
 ```
 
-The Lambda authenticator has its own build step run automatically by `deploy:authenticator`, but can be run manually:
+Lambda authenticator のビルドは `deploy:authenticator` 実行時に自動で行われるが、手動でも実行可能：
+
 ```bash
-cd lambda/authenticator
+cd examples/google-sso/lambda/authenticator
 bun install
 bun run build:js
 ```
 
-## Architecture
+### アーキテクチャ
 
-### CLI Entry Point
+`@yields-llc/aws-toolkit` の `BaseCommand` を継承した example 固有コマンド群を `commands/` に定義し、`bin/commander.ts` で登録する。
 
-`bin/commander.ts` registers all commands with Commander.js and is invoked via `bun task`.
+**スタックのデプロイ順序**（依存関係があるため順序厳守）：
 
-### Command Pattern
+1. `deploy:website` — S3 バケット作成・`apps/example-website/index.html` アップロード → `S3_BUCKET_NAME`, `S3_WEBSITE_DOMAIN` を `.env` に保存
+2. `deploy:certificate` — ACM 証明書（`us-east-1` 固定） → `HOSTED_ZONE_ID`, `CERTIFICATE_ARN` を `.env` に保存
+3. `deploy:cognito` — Cognito User Pool（Google を IdP として設定） → `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `USER_POOL_DOMAIN` を `.env` に保存
+4. `deploy:authenticator` — SAM で Lambda@Edge をビルド・デプロイ（`us-east-1` 固定） → `AUTHENTICATOR_FUNCTION_ARN` を `.env` に保存
+5. `deploy:cloudfront` — CloudFront ディストリビューション作成
+6. `deploy:route53` — Route53 A レコード作成
 
-All commands in `commands/` extend `BaseCommand` (`commands/base.ts`), which:
-- Loads `.env` variables into `process.env` on instantiation
-- Adds `--profile` and `--region` options defaulting to env vars
+各コマンドはスタックの Output を読み取り、次のコマンドが使う値を `.env` に追記する。**自動生成された環境変数は編集・削除しないこと。**
 
-Each command wraps AWS CLI calls (via `lib/bun/shell.ts` using Bun Shell) and saves stack outputs back to `.env` for use by subsequent commands.
+### 環境変数（`.env.example` をコピーして設定）
 
-### Stack Deployment Order
+| 変数名 | 必須 | 説明 |
+|---|---|---|
+| `AWS_PROFILE` | 任意 | AWS プロファイル名 |
+| `AWS_DEFAULT_REGION` | 任意 | リージョン（デフォルト: `ap-northeast-1`） |
+| `STACK_FAMILY` | 必須 | 全スタック名の共通プレフィックス |
+| `CERTIFICATE_DOMAIN` | 必須 | ACM 証明書のドメイン |
+| `HOSTED_ZONE_NAME` | 必須 | Route53 ホストゾーン名 |
+| `APP_HOST` | 必須 | アプリのホスト名 |
+| `USER_POOL_DOMAIN_PREFIX` | 必須 | Cognito ドメインのプレフィックス |
+| `GOOGLE_CLIENT_ID` | 必須 | Google OAuth クライアント ID |
+| `GOOGLE_CLIENT_SECRET` | 必須 | Google OAuth クライアントシークレット |
 
-The `deploy:all` command deploys stacks in this required order:
-1. **website** — S3 bucket (CloudFormation), uploads `apps/example-website/index.html`
-2. **certificate** — ACM certificate in `us-east-1` (required by CloudFront); saves `HOSTED_ZONE_ID`, `CERTIFICATE_ARN` to `.env`
-3. **cognito** — Cognito User Pool with Google as IdP; saves `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `USER_POOL_DOMAIN` to `.env`
-4. **authenticator** — SAM-deployed Lambda@Edge function in `us-east-1`; saves `AUTHENTICATOR_FUNCTION_ARN` to `.env`
-5. **cloudfront** — CloudFront distribution using the authenticator and certificate
-6. **route53** — DNS A record pointing to the CloudFront distribution
+### コードスタイル
 
-### Environment Variables
-
-`.env` is the single source of truth. Required variables are set manually before the first deploy; additional variables (IDs, ARNs) are written automatically by commands after each stack deploys. **Do not edit or delete auto-generated variables.**
-
-Copy `.env.example` to `.env` and populate:
-- `STACK_FAMILY` — prefix for all CloudFormation stack names
-- `CERTIFICATE_DOMAIN`, `HOSTED_ZONE_NAME`, `APP_HOST`
-- `USER_POOL_DOMAIN_PREFIX`
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-
-### Key Directories
-
-- `commands/` — CLI command classes (one file per command)
-- `lib/aws/` — Thin wrappers around AWS CLI (`cloudformation`, `route53`, `cloudfront`, `s3`, `sam`, `lambda`)
-- `lib/env/variables.ts` — `loadVariables()` / `saveVariables()` for `.env` read/write
-- `cloudformation/` — CloudFormation YAML templates (`s3.yml`, `certificate.yml`, `cognito.yml`, `cloudfront.yml`, `route53.yml`)
-- `lambda/authenticator/` — SAM project for the Lambda@Edge authenticator (`cognito-at-edge` library, built to CJS in `dist/`)
-- `apps/example-website/` — Static website (`index.html`) uploaded to S3
-
-### Code Style
-
-Enforced by Biome: single quotes, no semicolons, 2-space indent, 160 character line width. Path alias `@/*` resolves to the project root.
+Biome で強制：シングルクォート、セミコロンなし、インデント2スペース、行幅160文字。パスエイリアス `@/*` はプロジェクトルートに解決（`examples/google-sso/tsconfig.json`）。
