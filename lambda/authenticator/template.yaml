@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Cognito@edge
+
+Globals:
+  Function:
+    Timeout: 3
+    Tracing: Active
+
+Resources:
+  LambdaEdgePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Policy for Lambda@Edge Function
+      Path: /
+      ManagedPolicyName: !Sub "${AWS::StackName}-lambda-edge-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - iam:CreateServiceLinkedRole
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - lambda:GetFunction
+              - lambda:EnableReplication
+            Resource:
+              - !Sub "arn:aws:lambda:us-east-1:${AWS::AccountId}:function:${AWS::StackName}-*:*"
+          - Effect: Allow
+            Action:
+              - cloudfront:UpdateDistribution
+            Resource:
+              - !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
+
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - edgelambda.amazonaws.com
+            Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref LambdaEdgePolicy
+
+  AuthenticatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/
+      Runtime: nodejs22.x
+      Handler: index.handler
+      MemorySize: 128
+      Timeout: 5
+      AutoPublishAlias: latest
+      Role: !GetAtt FunctionRole.Arn
+      Tracing: Disabled
+
+Outputs:
+  AuthenticatorFunction:
+    Value: !GetAtt AuthenticatorFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-authenticator-function-arn"
+
+  AuthenticatorFunctionVersion:
+    Value: !Ref AuthenticatorFunction.Version
+    Export:
+      Name: !Sub "${AWS::StackName}-authenticator-function-version"
+
+  AuthenticatorFunctionAlias:
+    Value: !Ref AuthenticatorFunction.Alias
+    Export:
+      Name: !Sub "${AWS::StackName}-authenticator-function-alias"

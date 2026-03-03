@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: "2010-09-09"
+# NOTE: CloudFront で使用する場合はこのスタックを us-east-1 でデプロイすること
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: "証明書のプライマリドメイン名 (例: example.com)"
+
+  SubjectAlternativeNames:
+    Type: List<String>
+    Description: "SANに追加するドメイン名のカンマ区切りリスト (例: www.example.com,api.example.com)"
+    Default: ""
+
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: "DNS検証に使用するRoute 53ホストゾーンID"
+
+Conditions:
+  HasSANs: !Not [!Equals [!Join ["", !Ref SubjectAlternativeNames], ""]]
+
+Resources:
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      SubjectAlternativeNames: !If
+        - HasSANs
+        - !Ref SubjectAlternativeNames
+        - !Ref AWS::NoValue
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref HostedZoneId
+
+Outputs:
+  CertificateArn:
+    Value: !Ref Certificate
+    Export:
+      Name: !Sub "${AWS::StackName}-certificate-arn"

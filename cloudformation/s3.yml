@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Static website hosting with S3
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: S3 bucket name for static website
+    Default: example-website-bucket
+
+Resources:
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+
+Outputs:
+  BucketName:
+    Description: Name of S3 bucket
+    Value: !Ref WebsiteBucket
+  WebsiteRegionalDomain:
+    Description: Regional domain for website hosted on S3
+    Value: !GetAtt WebsiteBucket.RegionalDomainName

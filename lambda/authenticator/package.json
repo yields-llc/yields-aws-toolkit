@@ -1,0 +1,23 @@
+{
+  "name": "cognito-at-edge",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@biomejs/biome": "^2.1.3",
+    "@types/aws-lambda": "^8.10.152",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "cognito-at-edge": "^1.5.4"
+  },
+  "scripts": {
+    "build:js": "bun build ./src/index.ts --outdir ./dist --env inline --target node --format cjs",
+    "format": "biome format",
+    "format:fix": "biome format --write",
+    "lint": "biome lint"
+  }
+}

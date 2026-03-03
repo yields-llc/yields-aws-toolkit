@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  S3BucketName:
+    Type: String
+  S3DomainName:
+    Type: String
+  CertificateArn:
+    Type: String
+  CNAME:
+    Type: String
+  AuthFunctionArn:
+    Type: String
+    Default: ""
+  Enabled:
+    Type: String
+    Default: "true"
+
+Conditions:
+  UseAuth: !Not [!Equals [!Ref AuthFunctionArn, ""]]
+  IsEnabled: !Equals [!Ref Enabled, "true"]
+
+Resources:
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Description: !Sub "OriginAccessControl for ${AWS::StackName}-website"
+        Name: !Sub "${AWS::StackName}-website-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontResponseHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub "${AWS::StackName}-response-header-policy"
+        CustomHeadersConfig:
+          Items:
+            - Header: "Cache-Control"
+              Override: true
+              Value: "public, max-age=300"
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        PriceClass: PriceClass_All
+        Origins:
+          - Id: !Sub "${AWS::StackName}-website"
+            DomainName: !Ref S3DomainName
+            OriginAccessControlId: !If
+              - IsEnabled
+              - !GetAtt OriginAccessControl.Id
+              - !Ref AWS::NoValue
+            S3OriginConfig: {}
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          TargetOriginId: !Sub "${AWS::StackName}-website"
+          ViewerProtocolPolicy: https-only
+          AllowedMethods:
+            - HEAD
+            - GET
+          CachedMethods:
+            - GET
+            - HEAD
+          DefaultTTL: 300
+          MaxTTL: 3600
+          MinTTL: 60
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+          ResponseHeadersPolicyId: !If
+            - IsEnabled
+            - !GetAtt CloudFrontResponseHeadersPolicy.Id
+            - !Ref AWS::NoValue
+          LambdaFunctionAssociations: !If
+            - UseAuth
+            - - EventType: viewer-request
+                LambdaFunctionARN: !Ref AuthFunctionArn
+            - !Ref AWS::NoValue
+        ViewerCertificate:
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+          AcmCertificateArn: !Ref CertificateArn
+        HttpVersion: http2
+        Enabled: !Ref Enabled
+        Aliases:
+          - !Ref CNAME
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Retain
+    Properties:
+      Bucket: !Ref S3BucketName
+      PolicyDocument:
+        Statement:
+          - Action: s3:GetObject
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Condition:
+              StringEquals:
+                "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+
+Outputs:
+  DistributionId:
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub "${AWS::StackName}-cloud-front-distribution-id"
+  DomainName:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-cloud-front-domain-name"

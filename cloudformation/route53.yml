@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+
+  AliasName:
+    Type: String
+
+  AliasTarget:
+    Type: String
+
+  TTL:
+    Type: Number
+    Default: 300
+    Description: TTL（秒）
+
+Resources:
+  ARecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref AliasName
+      Type: A
+      AliasTarget:
+        DNSName: !Ref AliasTarget
+        HostedZoneId: Z2FDTNDATAQYW2 # CloudFront distribution ID

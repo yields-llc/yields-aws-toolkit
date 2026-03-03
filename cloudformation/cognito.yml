@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  UserPoolName:
+    Type: String
+  UserPoolDomainPrefix:
+    Type: String
+  GoogleClientId:
+    Type: String
+  GoogleClientSecret:
+    Type: String
+  CallbackUrls:
+    Type: CommaDelimitedList
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Ref UserPoolName
+
+  UserPoolIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderType: Google
+      ProviderName: Google
+      AttributeMapping:
+        email: email
+        name: name
+        picture: picture
+        given_name: given_name
+        family_name: family_name
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: 'email openid profile'
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: UserPoolIdentityProvider
+    Properties:
+      ClientName: !Sub "${UserPoolName}-client"
+      GenerateSecret: false
+      RefreshTokenValidity: 30
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      TokenValidityUnits:
+        IdToken: days
+        AccessToken: days
+        RefreshToken: days
+      UserPoolId: !Ref UserPool
+      SupportedIdentityProviders:
+        - Google
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+        - aws.cognito.signin.user.admin
+      CallbackURLs: !Ref CallbackUrls
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref UserPoolDomainPrefix
+      UserPoolId: !Ref UserPool
+
+Outputs:
+  UserPool:
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-user-pool"
+
+  UserPoolClient:
+    Value: !Ref UserPoolClient
+    Export:
+      Name: !Sub "${AWS::StackName}-user-pool-client"
+
+  UserPoolDomain:
+    Value: !Sub "${UserPoolDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+    Export:
+      Name: !Sub "${AWS::StackName}-user-pool-domain"

@@ -1,0 +1,13 @@
+/.idea
+.aws-sam
+
+# .env
+.env
+.env.*
+!.env.example
+
+# build
+dist/
+
+# dependences
+node_modules
