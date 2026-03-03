@@ -11,33 +11,34 @@ CloudFormation スタックを、AWS CLI + Bun Shell でデプロイし、イン
 graph LR
     Browser([ブラウザ]) -->|HTTPS| Route53[Route53]
     Route53 --> CF[CloudFront]
-    ACM[ACM Certificate] -. HTTPS .-> CF
+    ACM[ACM Certificate] -.->|HTTPS| CF
 
-    CF --> Lambda[Lambda@Edge\nAuthenticator]
+    CF --> Lambda["Lambda@Edge<br/>Authenticator"]
 
-    Lambda -->|未認証\nリダイレクト| Cognito[Cognito\nUser Pool]
-    Cognito <-->|OAuth 2.0| Google([Google Workspace])
-    Cognito -->|認証後\nリダイレクト| CF
+    Lambda -->|未認証 リダイレクト| Cognito["Cognito<br/>User Pool"]
+    Cognito -->|OAuth 2.0| Google([Google Workspace])
+    Google -->|認証後 リダイレクト| Cognito
+    Cognito -->|認証後 リダイレクト| CF
 
-    Lambda -->|認証済み\nコンテンツ取得| S3[S3\n静的ウェブサイト]
+    Lambda -->|認証済み コンテンツ取得| S3["S3<br/>静的ウェブサイト"]
 ```
 
 ### スタックのデプロイ依存関係
 
 ```mermaid
 graph TD
-    Website[deploy:website\nS3 + index.html]
-    Cert[deploy:certificate\nACM Certificate]
-    Cognito[deploy:cognito\nCognito User Pool]
-    Auth[deploy:authenticator\nLambda@Edge]
-    CF[deploy:cloudfront\nCloudFront Distribution]
-    R53[deploy:route53\nRoute53 Aレコード]
+    Website["deploy:website<br/>S3 + index.html"]
+    Cert["deploy:certificate<br/>ACM Certificate"]
+    Cognito["deploy:cognito<br/>Cognito User Pool"]
+    Auth["deploy:authenticator<br/>Lambda@Edge"]
+    CF["deploy:cloudfront<br/>CloudFront Distribution"]
+    R53["deploy:route53<br/>Route53 Aレコード"]
 
     Website --> CF
-    Cert    --> CF
+    Cert --> CF
     Cognito --> Auth
-    Auth    --> CF
-    CF      --> R53
+    Auth --> CF
+    CF --> R53
 ```
 
 ## 概要
