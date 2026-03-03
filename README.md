@@ -53,7 +53,7 @@ CloudFormation スタックを、AWS CLI + Bun Shell でデプロイし、イン
 | 環境変数名              | 説明                              | 必須 | デフォルト値                      |
 |--------------------|---------------------------------|----|-----------------------------|
 | AWS_PROFILE        | AWSプロファイルを指定                    | 任意 | 指定しなかった場合は、デフォルトプロファイルになります |
-| AWS_DEFAULT_REGION | AWSリージョンを指定                     | 任意 | ap-north-east-1             |
+| AWS_DEFAULT_REGION | AWSリージョンを指定                     | 任意 | ap-northeast-1             |
 | STACK_FAMILY       | CloudFormation の各スタックに共通する名称を指定 | 必須 | なし                          |
 | CERTIFICATE_DOMAIN | Certificate Manager 認証のドメイン     | 必須 | なし                          |
 | HOSTED_ZONE_NAME | ホストゾーンの名前を指定                    | 必須 | なし                          |
