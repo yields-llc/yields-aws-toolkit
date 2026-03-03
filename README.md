@@ -3,7 +3,48 @@ AWS Cognito の認証プロバイダーを使って、特定の Google Workspace
 
 CloudFormation スタックを、AWS CLI + Bun Shell でデプロイし、インフラを構築します。
 
+## アーキテクチャ
+
+### AWS インフラ構成
+
+```mermaid
+graph LR
+    Browser([ブラウザ]) -->|HTTPS| Route53[Route53]
+    Route53 --> CF[CloudFront]
+    ACM[ACM Certificate] -. HTTPS .-> CF
+
+    CF --> Lambda[Lambda@Edge\nAuthenticator]
+
+    Lambda -->|未認証\nリダイレクト| Cognito[Cognito\nUser Pool]
+    Cognito <-->|OAuth 2.0| Google([Google Workspace])
+    Cognito -->|認証後\nリダイレクト| CF
+
+    Lambda -->|認証済み\nコンテンツ取得| S3[S3\n静的ウェブサイト]
+```
+
+### スタックのデプロイ依存関係
+
+```mermaid
+graph TD
+    Website[deploy:website\nS3 + index.html]
+    Cert[deploy:certificate\nACM Certificate]
+    Cognito[deploy:cognito\nCognito User Pool]
+    Auth[deploy:authenticator\nLambda@Edge]
+    CF[deploy:cloudfront\nCloudFront Distribution]
+    R53[deploy:route53\nRoute53 Aレコード]
+
+    Website --> CF
+    Cert    --> CF
+    Cognito --> Auth
+    Auth    --> CF
+    CF      --> R53
+```
+
 ## 概要
+社内ツールを AWS で構築する際、毎回認証機能を実装するのは時間がかかります。
+
+このツールキットを使えば、Google Workspace の SSO 認証を簡単に設定できます。
+
 以下の手順で構築できます。
 
 - Google Cloud にて OAuth 2.0 クライアント を作成
