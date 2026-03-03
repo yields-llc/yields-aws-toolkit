@@ -111,7 +111,7 @@ $ bun run bin/commander.ts deploy:all
 All stacks deployed successfully
 ```
 
-デプロイが成功したら、`http://${APP_HOST}` にアクセスします。
+デプロイが成功したら、`https://${APP_HOST}` にアクセスします。
 
 以下のように、Webページが表示されれば正常です。
 
