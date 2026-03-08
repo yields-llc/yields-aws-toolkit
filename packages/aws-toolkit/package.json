@@ -2,7 +2,7 @@
   "name": "@yields-llc/aws-toolkit",
   "module": "bin/commander.ts",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "files": [
     "bin",
     "commands",
@@ -29,6 +29,7 @@
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format .",
-    "format:fix": "biome format --write ."
+    "format:fix": "biome format --write .",
+    "task": "bun run bin/commander.ts"
   }
 }

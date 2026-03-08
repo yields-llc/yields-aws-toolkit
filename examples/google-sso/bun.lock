@@ -4,7 +4,7 @@
     "": {
       "name": "yields-aws-toolkit",
       "dependencies": {
-        "@yields-llc/aws-toolkit": "^0.1.0",
+        "@yields-llc/aws-toolkit": "^0.2.0",
         "commander": "^14.0.3",
         "pino": "^10.3.1",
         "pino-pretty": "^13.1.3",
@@ -43,7 +43,7 @@
 
     "@types/node": ["@types/node@25.2.3", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-m0jEgYlYz+mDJZ2+F4v8D1AyQb+QzsNqRuI7xg1VQX/KlKS0qT9r1Mo16yo5F/MtifXFgaofIFsdFMox2SxIbQ=="],
 
-    "@yields-llc/aws-toolkit": ["@yields-llc/aws-toolkit@0.1.0", "https://npm.pkg.github.com/download/@yields-llc/aws-toolkit/0.1.0/f7566ae0067dbb372128b36503696b623c4d9d9b", { "dependencies": { "commander": "^14.0.3", "pino": "^10.3.1", "pino-pretty": "^13.1.3" }, "peerDependencies": { "typescript": "^5" } }, "sha512-xi5tP5CyeTNWA/TCFugboBQU/c4QSeSMS9ca4ruFbwobcGd+4wJj5qdcrzgScEpx2z97fJtgUOxQLH3h29CFew=="],
+    "@yields-llc/aws-toolkit": ["@yields-llc/aws-toolkit@0.2.0", "https://npm.pkg.github.com/download/@yields-llc/aws-toolkit/0.2.0/35ce754155366cd1c9476f09dd1b0a48040c6c66", { "dependencies": { "commander": "^14.0.3", "pino": "^10.3.1", "pino-pretty": "^13.1.3" }, "peerDependencies": { "typescript": "^5" } }, "sha512-r/5h/3CX8vbSbwUNL6C6XmqAnd77aVyOf1aYFD3RsPkQoVQdF+zvOaucJOwlSnGZ64SECkjjZhmI/tIVnhnsIQ=="],
 
     "atomic-sleep": ["atomic-sleep@1.0.0", "", {}, "sha512-kNOjDqAh7px0XWNI+4QbzoiR/nTkHAWNud2uvnJquD1/x5a7EQZMJT0AczqK0Qn67oY/TTQ1LbUKajZpp3I9tQ=="],
 
